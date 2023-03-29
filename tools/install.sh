@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Install/update required git submodules: binaryen, hook-cleaner-c, xrpld-hooks
 git submodule update --init
 

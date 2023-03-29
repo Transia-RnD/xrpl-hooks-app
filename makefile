@@ -1,28 +1,30 @@
 .PHONY: install build
 
-HOOK_C_FILENAME := $(shell jq -r '.HOOK_C_FILENAME' config.json)
-
-setup: install update-definitions
-
-build-set-hook: build set-hook
+setup: install
 
 install:
-	npm i
-	./install.sh
-	cp config-example.json config.json
+	yarn install
+	./tools/install.sh
 
-update-definitions:
-	node update-definitions.js
+# update-definitions:
+# 	node client/util/update-definitions.js
 
 build:
 	mkdir -p build
-	wasmcc ./hook-src/$(HOOK_C_FILENAME).c -o ./build/$(HOOK_C_FILENAME).wasm  -O0 -Wl,--allow-undefined -I../
-	./binaryen/bin/wasm-opt -O2 ./build/$(HOOK_C_FILENAME).wasm -o ./build/$(HOOK_C_FILENAME).wasm
-	./hook-cleaner-c/hook-cleaner ./build/$(HOOK_C_FILENAME).wasm
-	./xrpld-hooks/src/ripple/app/hook/guard_checker ./build/$(HOOK_C_FILENAME).wasm
+	$(foreach HOOK_C_FILENAME, $(shell ls ./hook-src/ | grep '\.c' | grep -v '\/'), \
+		HOOK_C_FILENAME=$(HOOK_C_FILENAME); \
+		wasmcc ./hook-src/$(HOOK_C_FILENAME) -o ./build/$(HOOK_C_FILENAME).wasm  -O0 -Wl,--allow-undefined -I../; \
+		./binaryen/bin/wasm-opt -O2 ./build/$(HOOK_C_FILENAME).wasm -o ./build/$(HOOK_C_FILENAME).wasm; \
+		./hook-cleaner-c/hook-cleaner ./build/$(HOOK_C_FILENAME).wasm; \
+		./xrpld-hooks/src/ripple/app/hook/guard_checker ./build/$(HOOK_C_FILENAME).wasm; \
+	)
 
+# integration-runner:
+# 	./tools/integration.sh
+
+# set-hook: integration-runner set-hook
 set-hook:
-	node ./client/set-hook.js
+	npx ts-node ./src/setHook.tsx
 
-clean:
-	rm -rf build/*
+# clean:
+# 	rm -rf build/*
